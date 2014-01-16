@@ -40,8 +40,17 @@ def unblock(args):
     if args:
         unblock_ids(args.split(','))
     else:
-        #TODO
-        unblock_ids()
+        url = TWITTER_API_PREFIX + 'blocks/ids.json'
+        oauth = get_oauth()
+        response = requests.get(url, params={"stringify_ids": True}, auth=oauth)
+        if response.status_code == 200:
+            user_ids = json.loads(response.content)[u"ids"]
+            print "Unblocking these:", user_ids
+            unblock_ids(user_ids)
+        else:
+            print "Failed fetching blocked ids:"
+            print "status_code", response.status_code
+            print "response content", dump_json(response.content)
 
 
 def unblock_ids(ids):
