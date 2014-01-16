@@ -9,3 +9,5 @@ TWITTER_CONF = {
     'access_token': '',
     'access_token_secret': ''
 }
+
+ERROR_LIMIT = 5
