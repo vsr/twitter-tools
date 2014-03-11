@@ -76,6 +76,54 @@ def unblock_ids(ids):
                 raise Exception("Too many errors. Let's take a break for now..")
 
 
+def block_ids(ids):
+    " blocks ids "
+    url = TWITTER_API_PREFIX + 'blocks/create.json'
+
+    error_count = 0
+    oauth = get_oauth()
+    for user_id in ids:
+        params = {"user_id" :user_id, "include_entities": False, "skip_status": True}
+        response = requests.post(url=url, params=params, auth=oauth)
+        if response.status_code == 200:
+            print "Blocked user:", user_id
+        else:
+            error_count += 1
+            if response.status_code in client_error_codes:
+                print "Client error", response.status_code
+                print "response content", dump_json(response.content)
+            elif response.status_code in server_error_codes:
+                print "Twitter API server error", response.status_code
+                print "response content", dump_json(response.content)
+            if error_count > ERROR_LIMIT:
+                raise Exception("Too many errors. Let's take a break for now..")
+
+
+def block_folks(folk_type='friends'):
+    " Blocks folks "
+    url = TWITTER_API_PREFIX + folk_type + '/ids.json'
+    oauth = get_oauth()
+    response = requests.get(url, params={"stringify_ids": True}, auth=oauth)
+    if response.status_code == 200:
+        user_ids = json.loads(response.content)[u"ids"]
+        print "Blocking these:", user_ids
+        block_ids(user_ids)
+    else:
+        print "Failed fetching "+folk_type+" ids:"
+        print "status_code", response.status_code
+        print "response content", dump_json(response.content)
+
+
+def block_friends():
+    " Blocks friends "
+    block_folks(folk_type='friends')
+
+
+def block_followers():
+    " Blocks followers "
+    block_folks(folk_type='followers')
+
+
 if __name__ == '__main__':
     cmdparser = optparse.OptionParser()
     cmdparser.add_option("-v", "--verify", action="store_true",
@@ -84,6 +132,12 @@ if __name__ == '__main__':
     cmdparser.add_option("-u", "--unblock", action="store_true",
                          dest="unblock", default=False,
                          help="Unblocks user_ids(csv) passed or all blocked users.")
+    cmdparser.add_option("--block_friends", action="store_true",
+                         dest="block_friends", default=False,
+                         help="Blocks friends you follow.")
+    cmdparser.add_option("--block_followers", action="store_true",
+                         dest="block_followers", default=False,
+                         help="Block followers that follow you.")
 
     (options, args) = cmdparser.parse_args()
 
@@ -91,3 +145,7 @@ if __name__ == '__main__':
         verify_credentials()
     if options.unblock:
         unblock(args)
+    if options.block_followers:
+        block_followers()
+    if options.block_friends:
+        block_friends()
